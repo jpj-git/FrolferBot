@@ -1,9 +1,10 @@
 # bot.py
+import ast
 import os
 import random
 import string
 import pendulum
-import discord
+
 from dotenv import load_dotenv
 from datetime import datetime
 from keep_alive import keep_alive
@@ -19,9 +20,11 @@ bot = commands.Bot(command_prefix='-')
 votes = {}
 
 # votes = {
-#     'jaxper': ['Wickham', 'Wickham', 'Page'],
-#     'tester1': ['Veterans', 'Veterans', 'Veterans'],
-#     'tester2': ['Nichols', 'Cranbury', 'Salem']
+#     'jaxper': ['Wickham', 'Maple Hill', 'Page'],
+#     'tester1': ['Veterans', 'Veterans', 'Maple Hill'],
+#     'tester2': ['Nichols', 'Cranbury', 'Salem'],
+#     'tester3': ['Salem', 'Waveny', 'Veterans'],
+#     'tester4': ['Ecker Hill', 'Ecker Hill', 'Veterans']
 # }
 
 event_details = ''
@@ -204,6 +207,18 @@ async def admin_remove(ctx, username):
 
     del votes[username]
     response = f'Admin removal of votes for {username}.'
+
+    await ctx.send(response)
+
+
+@bot.command(name='admin_multivote', help=f'Admin tool to add votes for multiple players.')
+@commands.has_role('Mastermind')
+async def admin_multivote(ctx, multiple):
+    global votes
+    votes = ast.literal_eval(multiple)
+
+    print('Overall votes:\n   ' + '\n   '.join(get_courses_from_votes(True)))
+    response = 'Admin voted on behalf of multiple users for:\n   ' + '\n   '.join(get_courses_from_votes(True))
 
     await ctx.send(response)
 
