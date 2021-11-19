@@ -15,12 +15,15 @@ keep_alive()
 TOKEN = os.getenv('DISCORD_TOKEN')
 
 bot = commands.Bot(command_prefix='-')
-# votes = {}
-votes = {
-    'jaxper': ['Wickham', 'Wickham', 'Page'],
-    'tester1': ['Veterans', 'Veterans', 'Veterans'],
-    'tester2': ['Nichols', 'Cranbury', 'Salem']
-}
+
+votes = {}
+
+# votes = {
+#     'jaxper': ['Wickham', 'Wickham', 'Page'],
+#     'tester1': ['Veterans', 'Veterans', 'Veterans'],
+#     'tester2': ['Nichols', 'Cranbury', 'Salem']
+# }
+
 event_details = ''
 
 
@@ -28,7 +31,7 @@ event_details = ''
              help=f'Adds your votes to the course(s) you list (case-insensitive). Ex: Wickham Veterans page\n'
                   f'If you include less than three, the first one in your list will be counted extra. '
                   f'Meaning, Wickham would be 3 votes for Wickham and Page Wickham would be 2 and 1, respectively. '
-                  f'Additionally, enclose multi-word names in "". (Ex: vote for Maple Hill with "Maple Hill"'
+                  f'Additionally, enclose multi-word names in "". (Ex: vote for Maple Hill with "Maple Hill")'
              )
 async def vote(ctx, vote1: str, vote2="", vote3=""):
     username = ctx.message.author.name
@@ -43,6 +46,19 @@ async def vote(ctx, vote1: str, vote2="", vote3=""):
 
     await ctx.send(response)
 
+
+@bot.command(name='admin_vote', help=f'Admin tool to add votes for specified player.')
+@commands.has_role('Mastermind')
+async def admin_vote(ctx, username, vote1: str, vote2="", vote3=""):
+    cleaned = clean_votes(vote1, vote2, vote3)
+    votes.update({username: cleaned})
+
+    print('Overall votes:\n   ' + '\n   '.join(get_courses_from_votes(True)))
+    response = f'Admin voted on behalf of {username} for: {", ".join(cleaned)}'
+
+    await ctx.send(response)
+
+
 def clean_votes(vote1: str, vote2: str, vote3: str):
     if not vote2:
         vote2 = vote1
@@ -52,22 +68,29 @@ def clean_votes(vote1: str, vote2: str, vote3: str):
         vote2 = vote1
         vote3 = temp
 
-    return [string.capwords(vote1), string.capwords(vote2), string.capwords(vote3)]
+    return [clean_str(vote1), clean_str(vote2), clean_str(vote3)]
+
+
+def clean_str(course_name: str):
+    stripped = course_name.strip(',. ')
+
+    return string.capwords(stripped)
+
 
 @bot.command(name='change_vote',
              help=f'Update a vote(s) that has been cast (case-insensitive). Default: 1, max: 3.\n'
                   f'Example: if you voted for Wickham and want to update to Veterans it would be '
                   f'"Wickham Veterans" to change a single vote. If you voted Wickham all three times '
                   f'and want to update 2 or 3 of them, add those, respectively, to the end of the command. '
-                  f'Additionally, enclose multi-word names in "". (Ex: update to/from Maple Hill with "Maple Hill"'
+                  f'Additionally, enclose multi-word names in "". (Ex: update to/from Maple Hill with "Maple Hill")'
              )
 async def change_vote(ctx, old_vote: str, new_vote: str, updates=1):
     global votes
 
     username = ctx.message.author.name
     courses_lower = [item.lower() for item in votes[username]]
-    old_vote = string.capwords(old_vote)
-    new_vote = string.capwords(new_vote)
+    old_vote = clean_str(old_vote)
+    new_vote = clean_str(new_vote)
     old_vote_count = list.count(votes[username], old_vote)
 
     if old_vote_count == 0:
@@ -82,11 +105,41 @@ async def change_vote(ctx, old_vote: str, new_vote: str, updates=1):
             index = courses_lower.index(old_vote.lower())
             courses_lower[index] = new_vote
 
-        votes[username] = [string.capwords(item) for item in courses_lower]
+        votes[username] = [clean_str(item) for item in courses_lower]
         print('Votes after update:\n   ' + '\n   '.join(get_courses_from_votes(True)))
         response = f'Updated {old_vote} to {new_vote}, {updates} time(s)'
 
     await ctx.send(response)
+
+
+@bot.command(name='admin_change', help=f'Admin tool to remove votes for specified player.')
+@commands.has_role('Mastermind')
+async def admin_change(ctx, username, old_vote: str, new_vote: str, updates=1):
+    global votes
+
+    courses_lower = [item.lower() for item in votes[username]]
+    old_vote = clean_str(old_vote)
+    new_vote = clean_str(new_vote)
+    old_vote_count = list.count(votes[username], old_vote)
+
+    if old_vote_count == 0:
+        response = check_old_vote(old_vote, username)
+    else:
+        if updates > old_vote_count:
+            updates = old_vote_count
+        if updates > 3:
+            updates = 3
+
+        for x in range(updates):
+            index = courses_lower.index(old_vote.lower())
+            courses_lower[index] = new_vote
+
+        votes[username] = [clean_str(item) for item in courses_lower]
+        print('Votes after update:\n   ' + '\n   '.join(get_courses_from_votes(True)))
+        response = f'Admin updated {old_vote} to {new_vote}, {updates} time(s) on behalf of {username}'
+
+    await ctx.send(response)
+
 
 def check_old_vote(old_vote: str, user_voting: str):
     alt = ''
@@ -95,6 +148,7 @@ def check_old_vote(old_vote: str, user_voting: str):
     for course in votes[user_voting]:
         if old_vote.lower() in course.lower() and course not in options:
             options.append(course)
+
     if options:
         alt = f'Did you mean {", or ".join(sorted(options))}? '
 
@@ -109,6 +163,7 @@ async def current_votes(ctx, by_person=False):
         response = 'No one has voted yet! Run "vote" to cast yours.'
     await ctx.send(response)
 
+
 def get_courses_from_votes(by_person=False):
     votes_casted = []
     if not by_person:
@@ -119,6 +174,7 @@ def get_courses_from_votes(by_person=False):
             votes_casted.append(f'{key}: {votes[key]}')
 
     return sorted(votes_casted)
+
 
 @bot.command(name='next_event', help='Picks a random course based on votes.')
 async def next_event(ctx):
@@ -141,6 +197,17 @@ def pick_course():
     return response
 
 
+@bot.command(name='admin_remove', help=f'Admin tool to remove votes for specified player.')
+@commands.has_role('Mastermind')
+async def admin_remove(ctx, username):
+    global votes
+
+    del votes[username]
+    response = f'Admin removal of votes for {username}.'
+
+    await ctx.send(response)
+
+
 @bot.command(name='clear', help='Used to clear votes and event info after the round has taken place.')
 @commands.has_role('Mastermind')
 async def clear(ctx, only_event_details=False):
@@ -153,9 +220,10 @@ async def clear(ctx, only_event_details=False):
     else:
         votes.clear()
         event_details = ''
-        response = 'Cleared the votes event details. Ready for the voting again next week.'
+        response = 'Cleared the votes and event details. Ready for the voting again next week.'
 
     await ctx.send(response)
+
 
 @bot.event
 async def on_command_error(ctx, error):
