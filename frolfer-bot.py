@@ -2,7 +2,7 @@
 import ast
 import os
 import random
-import string
+import helpers
 import pendulum
 
 from dotenv import load_dotenv
@@ -26,15 +26,16 @@ event_details = ''
                   f'Additionally, enclose multi-word names in "". (Ex: vote for Maple Hill with "Maple Hill")'
              )
 async def vote(ctx, vote1: str, vote2="", vote3=""):
+    global votes
+
     username = ctx.message.author.name
+
     if votes and username in votes.keys():
         response = 'You\'ve already voted. Run "change_vote" to update it, if desired.'
     else:
-        cleaned = clean_votes(vote1, vote2, vote3)
-        votes.update({username: cleaned})
-
-        print('Overall votes:\n   ' + '\n   '.join(get_courses_from_votes(True)))
-        response = f'Voted for: {", ".join(cleaned)}'
+        resp = helpers.vote(votes, username, vote1, vote2, vote3)
+        votes = resp['v']
+        response = resp['r']
 
     await ctx.send(response)
 
@@ -42,31 +43,25 @@ async def vote(ctx, vote1: str, vote2="", vote3=""):
 @bot.command(name='admin_vote', help=f'Admin tool to add votes for specified player.')
 @commands.has_role('Mastermind')
 async def admin_vote(ctx, username, vote1: str, vote2="", vote3=""):
-    cleaned = clean_votes(vote1, vote2, vote3)
-    votes.update({username: cleaned})
+    global votes
 
-    print('Overall votes:\n   ' + '\n   '.join(get_courses_from_votes(True)))
-    response = f'Admin voted on behalf of {username} for: {", ".join(cleaned)}'
+    resp = helpers.vote(votes, username, vote1, vote2, vote3, True)
+    votes = resp['v']
+    response = resp['r']
 
     await ctx.send(response)
 
 
-def clean_votes(vote1: str, vote2: str, vote3: str):
-    if not vote2:
-        vote2 = vote1
-        vote3 = vote1
-    elif not vote3:
-        temp = vote2
-        vote2 = vote1
-        vote3 = temp
+@bot.command(name='admin_multivote', help=f'Admin tool to add votes for multiple players.')
+@commands.has_role('Mastermind')
+async def admin_multivote(ctx, multiple):
+    global votes
+    votes = ast.literal_eval(multiple)
 
-    return [clean_str(vote1), clean_str(vote2), clean_str(vote3)]
+    print('Overall votes:\n   ' + '\n   '.join(helpers.get_courses_from_votes(votes, True)))
+    response = 'Admin voted on behalf of multiple users for:\n   ' + '\n   '.join(helpers.get_courses_from_votes(votes, True))
 
-
-def clean_str(course_name: str):
-    stripped = course_name.strip(',. ')
-
-    return string.capwords(stripped)
+    await ctx.send(response)
 
 
 @bot.command(name='change_vote',
@@ -78,94 +73,34 @@ def clean_str(course_name: str):
              )
 async def change_vote(ctx, old_vote: str, new_vote: str, updates=1):
     global votes
-
     username = ctx.message.author.name
-    courses_lower = [item.lower() for item in votes[username]]
-    old_vote = clean_str(old_vote)
-    new_vote = clean_str(new_vote)
-    old_vote_count = list.count(votes[username], old_vote)
 
-    if old_vote_count == 0:
-        response = check_old_vote(old_vote, username)
-    else:
-        if updates > old_vote_count:
-            updates = old_vote_count
-        if updates > 3:
-            updates = 3
-
-        for x in range(updates):
-            index = courses_lower.index(old_vote.lower())
-            courses_lower[index] = new_vote
-
-        votes[username] = [clean_str(item) for item in courses_lower]
-        print('Votes after update:\n   ' + '\n   '.join(get_courses_from_votes(True)))
-        response = f'Updated {old_vote} to {new_vote}, {updates} time(s)'
+    resp = helpers.change_vote(votes, username, old_vote, new_vote, updates)
+    votes = resp['v']
+    response = resp['r']
 
     await ctx.send(response)
 
 
-@bot.command(name='admin_change', help=f'Admin tool to remove votes for specified player.')
+@bot.command(name='admin_change', help=f'Admin tool to change votes for specified player.')
 @commands.has_role('Mastermind')
 async def admin_change(ctx, username, old_vote: str, new_vote: str, updates=1):
     global votes
 
-    courses_lower = [item.lower() for item in votes[username]]
-    old_vote = clean_str(old_vote)
-    new_vote = clean_str(new_vote)
-    old_vote_count = list.count(votes[username], old_vote)
-
-    if old_vote_count == 0:
-        response = check_old_vote(old_vote, username)
-    else:
-        if updates > old_vote_count:
-            updates = old_vote_count
-        if updates > 3:
-            updates = 3
-
-        for x in range(updates):
-            index = courses_lower.index(old_vote.lower())
-            courses_lower[index] = new_vote
-
-        votes[username] = [clean_str(item) for item in courses_lower]
-        print('Votes after update:\n   ' + '\n   '.join(get_courses_from_votes(True)))
-        response = f'Admin updated {old_vote} to {new_vote}, {updates} time(s) on behalf of {username}'
+    resp = helpers.change_vote(votes, username, old_vote, new_vote, updates, True)
+    votes = resp['v']
+    response = resp['r']
 
     await ctx.send(response)
-
-
-def check_old_vote(old_vote: str, user_voting: str):
-    alt = ''
-    options = []
-
-    for course in votes[user_voting]:
-        if old_vote.lower() in course.lower() and course not in options:
-            options.append(course)
-
-    if options:
-        alt = f'Did you mean {", or ".join(sorted(options))}? '
-
-    return f'{old_vote} isn\'t in your current list of votes. {alt}Run "current_votes" to verify list.'
 
 
 @bot.command(name='current_votes', help='Shows list of current votes.')
 async def current_votes(ctx, by_person=False):
     if votes:
-        response = 'Current votes:\n   ' + '\n   '.join(get_courses_from_votes(by_person))
+        response = 'Current votes:\n   ' + '\n   '.join(helpers.get_courses_from_votes(votes, by_person))
     else:
         response = 'No one has voted yet! Run "vote" to cast yours.'
     await ctx.send(response)
-
-
-def get_courses_from_votes(by_person=False):
-    votes_casted = []
-    if not by_person:
-        for val in votes.values():
-            votes_casted.extend(val)
-    else:
-        for key in votes.keys():
-            votes_casted.append(f'{key}: {votes[key]}')
-
-    return sorted(votes_casted)
 
 
 @bot.command(name='next_event', help='Picks a random course based on votes.')
@@ -179,7 +114,7 @@ def pick_course():
     global event_details
 
     if votes:
-        course_pick = random.choice(get_courses_from_votes())
+        course_pick = random.choice(helpers.get_courses_from_votes(votes))
         sunday = pendulum.now().next(pendulum.SUNDAY).strftime('%m/%d')
         event_details = f'Next event: playing {course_pick} on Sunday, {sunday}'
         response = event_details
@@ -196,18 +131,6 @@ async def admin_remove(ctx, username):
 
     del votes[username]
     response = f'Admin removal of votes for {username}.'
-
-    await ctx.send(response)
-
-
-@bot.command(name='admin_multivote', help=f'Admin tool to add votes for multiple players.')
-@commands.has_role('Mastermind')
-async def admin_multivote(ctx, multiple):
-    global votes
-    votes = ast.literal_eval(multiple)
-
-    print('Overall votes:\n   ' + '\n   '.join(get_courses_from_votes(True)))
-    response = 'Admin voted on behalf of multiple users for:\n   ' + '\n   '.join(get_courses_from_votes(True))
 
     await ctx.send(response)
 
