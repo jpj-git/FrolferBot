@@ -1,4 +1,4 @@
-# bot.py
+# frolfer-bot.py
 import ast
 import os
 import random
@@ -14,19 +14,8 @@ from discord.ext import commands
 load_dotenv()
 keep_alive()
 TOKEN = os.getenv('DISCORD_TOKEN')
-
 bot = commands.Bot(command_prefix='-')
-
 votes = {}
-
-# votes = {
-#     'jaxper': ['Wickham', 'Maple Hill', 'Page'],
-#     'tester1': ['Veterans', 'Veterans', 'Maple Hill'],
-#     'tester2': ['Nichols', 'Cranbury', 'Salem'],
-#     'tester3': ['Salem', 'Waveny', 'Veterans'],
-#     'tester4': ['Ecker Hill', 'Ecker Hill', 'Veterans']
-# }
-
 event_details = ''
 
 
