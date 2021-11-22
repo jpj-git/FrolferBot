@@ -33,9 +33,7 @@ async def vote(ctx, vote1: str, vote2="", vote3=""):
     if votes and username in votes.keys():
         response = 'You\'ve already voted. Run "change_vote" to update it, if desired.'
     else:
-        resp = helpers.vote(votes, username, vote1, vote2, vote3)
-        votes = resp['v']
-        response = resp['r']
+        votes, response = helpers.vote(votes, username, vote1, vote2, vote3)
 
     await ctx.send(response)
 
@@ -45,9 +43,7 @@ async def vote(ctx, vote1: str, vote2="", vote3=""):
 async def admin_vote(ctx, username, vote1: str, vote2="", vote3=""):
     global votes
 
-    resp = helpers.vote(votes, username, vote1, vote2, vote3, True)
-    votes = resp['v']
-    response = resp['r']
+    votes, response = helpers.vote(votes, username, vote1, vote2, vote3, True)
 
     await ctx.send(response)
 
@@ -75,9 +71,7 @@ async def change_vote(ctx, old_vote: str, new_vote: str, updates=1):
     global votes
     username = ctx.message.author.name
 
-    resp = helpers.change_vote(votes, username, old_vote, new_vote, updates)
-    votes = resp['v']
-    response = resp['r']
+    votes, response = helpers.change_vote(votes, username, old_vote, new_vote, updates)
 
     await ctx.send(response)
 
@@ -87,9 +81,7 @@ async def change_vote(ctx, old_vote: str, new_vote: str, updates=1):
 async def admin_change(ctx, username, old_vote: str, new_vote: str, updates=1):
     global votes
 
-    resp = helpers.change_vote(votes, username, old_vote, new_vote, updates, True)
-    votes = resp['v']
-    response = resp['r']
+    votes, response = helpers.change_vote(votes, username, old_vote, new_vote, updates, True)
 
     await ctx.send(response)
 
@@ -100,28 +92,37 @@ async def current_votes(ctx, by_person=False):
         response = 'Current votes:\n   ' + '\n   '.join(helpers.get_courses_from_votes(votes, by_person))
     else:
         response = 'No one has voted yet! Run "vote" to cast yours.'
+
     await ctx.send(response)
 
 
 @bot.command(name='next_event', help='Picks a random course based on votes.')
 async def next_event(ctx):
-    response = event_details if event_details else pick_course()
+    response = event_details if event_details else pick_course(ctx)
 
     await ctx.send(response)
 
 
-def pick_course():
+def pick_course(ctx):
     global event_details
 
     if votes:
         course_pick = random.choice(helpers.get_courses_from_votes(votes))
         sunday = pendulum.now().next(pendulum.SUNDAY).strftime('%m/%d')
-        event_details = f'Next event: playing {course_pick} on Sunday, {sunday}'
-        response = event_details
+        event_details = f'Next event: playing {course_pick} on Sunday, {sunday}.'
+        response = f'{ctx.message.guild.default_role}\n{event_details}'
     else:
         response = 'Votes are needed to pick the event details. Run "vote" to cast yours.'
 
     return response
+
+
+@bot.command(name='ctp', help='Picks a random hole from those provided for Closest to Pin.')
+async def closest_pin(ctx, *args):
+    hole_pick = random.choice(args)
+    response = f'{ctx.message.guild.default_role}\nClosest to pin hole: {hole_pick}.'
+
+    await ctx.send(response)
 
 
 @bot.command(name='admin_remove', help=f'Admin tool to remove votes for specified player.')

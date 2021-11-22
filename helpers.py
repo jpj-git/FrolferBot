@@ -12,11 +12,7 @@ def vote(votes: dict, username: str, vote1: str, vote2: str, vote3: str, is_admi
     else:
         response = f'Voted for: {", ".join(cleaned)}'
 
-    resp = {
-        'v': votes,
-        'r': response
-    }
-    return resp
+    return votes, response
 
 
 def clean_votes(vote1: str, vote2: str, vote3: str):
@@ -62,11 +58,7 @@ def change_vote(votes: dict, username: str, old_vote: str, new_vote: str, update
         else:
             response = f'Updated {old_vote} to {new_vote}, {updates} time(s)'
 
-    resp = {
-        'v': votes,
-        'r': response
-    }
-    return resp
+    return votes, response
 
 
 def check_old_vote(votes: dict, old_vote: str, user_voting: str):
