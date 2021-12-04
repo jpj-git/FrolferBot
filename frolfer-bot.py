@@ -1,22 +1,24 @@
-# frolfer-bot.py
+
 import ast
 import os
 import random
+import discord
+import goog
 import helpers
 import pendulum
 
 from dotenv import load_dotenv
 from datetime import datetime
 from keep_alive import keep_alive
-
 from discord.ext import commands
 
 load_dotenv()
-keep_alive()
+# keep_alive()
 TOKEN = os.getenv('DISCORD_TOKEN')
 bot = commands.Bot(command_prefix='-')
 votes = {}
 event_details = ''
+cal_event = discord.Embed()
 
 
 @bot.command(name='vote',
@@ -101,6 +103,8 @@ async def next_event(ctx):
     response = event_details if event_details else pick_course(ctx)
 
     await ctx.send(response)
+    if cal_event.description:
+        await ctx.send(embed=cal_event)
 
 
 def pick_course(ctx):
@@ -108,8 +112,12 @@ def pick_course(ctx):
 
     if votes:
         course_pick = random.choice(helpers.get_courses_from_votes(votes))
-        sunday = pendulum.now().next(pendulum.SUNDAY).strftime('%m/%d')
-        event_details = f'Next event: playing {course_pick} on Sunday, {sunday}.'
+        sunday = pendulum.now().next(pendulum.SUNDAY)
+        cal_url = goog.create_calendar_event(course_pick, sunday.strftime('%Y%m%d'))
+        # cal_url = goog.create_cal_event(course_pick, sunday)
+        sunday_fmt = sunday.strftime("%m/%d")
+        event_details = f'Next event: playing {course_pick} on Sunday, {sunday_fmt}.'
+        cal_event.description = f'[Add Sunday, {sunday_fmt} at {course_pick} to calendar]({cal_url})'
         response = f'{ctx.message.guild.default_role}\n{event_details}'
     else:
         response = 'Votes are needed to pick the event details. Run "vote" to cast yours.'
@@ -141,13 +149,15 @@ async def admin_remove(ctx, username):
 async def clear(ctx, only_event_details=False):
     global votes
     global event_details
+    global cal_event
+
+    event_details = ''
+    cal_event = discord.Embed()
 
     if only_event_details:
-        event_details = ''
         response = 'Cleared event details. Run "next_event" when you\'re ready to pick again.'
     else:
         votes.clear()
-        event_details = ''
         response = 'Cleared the votes and event details. Ready for the voting again next week.'
 
     await ctx.send(response)
@@ -159,6 +169,8 @@ async def on_command_error(ctx, error):
 
     if isinstance(error, commands.errors.CheckFailure):
         await ctx.send('You do not have the correct role for this command.')
+    elif isinstance(error, commands.errors.CommandError):
+        await ctx.send(f'{error}. Use *-help* to see available commands.')
 
     with open('err.log', 'a') as error_log_file:
         error_log_file.write(f'{now} --- Unhandled error: {error}\n')

@@ -1,2 +1,10 @@
 2021-11-10 23:37:08 --- Unhandled error: Role 'admin' is required to run this command.
 2021-11-18 15:45:41 --- Unhandled error: tester2 is not a recognised boolean option
+2021-11-22 10:35:41 --- Unhandled error: Command raised an exception: TypeError: Random.choice() takes 2 positional arguments but 6 were given
+2021-11-22 10:36:17 --- Unhandled error: Command raised an exception: TypeError: Random.choice() takes 2 positional arguments but 6 were given
+2021-11-22 10:37:01 --- Unhandled error: Command raised an exception: TypeError: Random.choice() takes 2 positional arguments but 6 were given
+2021-11-22 10:40:03 --- Unhandled error: Command raised an exception: TypeError: list expected at most 1 argument, got 5
+2021-11-22 13:17:41 --- Unhandled error: Command raised an exception: AttributeError: 'str' object has no attribute 'to_dict'
+2021-11-22 14:17:34 --- Unhandled error: Command "next_eventt" is not found
+2021-12-03 22:52:06 --- Unhandled error: Command raised an exception: SyntaxError: unterminated string literal (detected at line 1) (<unknown>, line 1)
+2021-12-03 22:53:02 --- Unhandled error: Command raised an exception: RefreshError: ('invalid_grant: Token has been expired or revoked.', {'error': 'invalid_grant', 'error_description': 'Token has been expired or revoked.'})
