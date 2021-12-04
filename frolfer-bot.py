@@ -13,7 +13,7 @@ from keep_alive import keep_alive
 from discord.ext import commands
 
 load_dotenv()
-# keep_alive()
+keep_alive()
 TOKEN = os.getenv('DISCORD_TOKEN')
 bot = commands.Bot(command_prefix='-')
 votes = {}
