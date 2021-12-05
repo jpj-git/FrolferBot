@@ -1,2 +1,2 @@
 # FrolferBot
- Bot used for local DG group while learning Python
+ Discord bot used for local DG group while learning Python
